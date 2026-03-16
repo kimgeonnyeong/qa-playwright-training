@@ -1,0 +1,21 @@
+node_modules/
+
+#playwright
+playwright-report/
+playwright/.cache/
+test-results/
+trace/
+
+#allure
+allure-results/
+allure-report/
+
+# debug files
+*.png
+*.webm
+*.zip
+
+#mac
+.DS_store
+blob-report/
+.env
