@@ -1,38 +1,29 @@
 import { test, expect } from '@playwright/test';
 
 test('무신사 메인 > KICKS > 나이키 선택 > 구매 시나리오', async ({ page }) => {
-    // 90초 타임아웃 유지
     test.setTimeout(90000); 
 
-    // 네트워크 리소스 로드까지 대기 (가장 안정적)
-    await page.goto('https://www.musinsa.com/', { waitUntil: 'networkidle' });
+    // [전략 1] 메인 페이지를 거치지 않고 KICKS 섹션으로 바로 접속
+    // 클릭 실패 리스크를 아예 없애버립니다.
+    console.log('🚀 KICKS 페이지 직접 진입 시도...');
+    await page.goto('https://www.musinsa.com/main/kicks/home', { waitUntil: 'networkidle' });
 
-    console.log('🚀 KICKS 메뉴 진입 중...');
-    
-    // [보완] 메뉴를 가릴 수 있는 팝업 제거
-    await page.keyboard.press('Escape');
-
-    // [핵심 수정] 가장 직관적이고 넓은 범위의 셀렉터 사용
-    // 1. 'KICKS' 텍스트를 포함하는 첫 번째 'a' 태그를 찾습니다.
-    // 2. exact: true 옵션을 제거하여 숨겨진 문자나 아이콘이 있어도 찾도록 합니다.
-    const kicksMenu = page.locator('a:has-text("KICKS")').first();
-    
-    // 3. 요소가 나타날 때까지 확실히 대기 (최대 10초)
-    await kicksMenu.waitFor({ state: 'visible', timeout: 10000 });
-    
-    // 4. 클릭 전 스크롤하여 화면에 표시되도록 보장
-    await kicksMenu.scrollIntoViewIfNeeded();
-
-    // 5. [수정] 일반 클릭 시도
-    // force 옵션은 꼭 필요할 때만 쓰는 것이 좋습니다.
-    await kicksMenu.click({ timeout: 5000 }).catch(async () => {
-        console.log('⚠️ 일반 클릭 실패, force 옵션으로 재시도...');
-        await kicksMenu.click({ force: true });
-    });
+    // 만약 바로 이동이 안 된다면 (메인으로 리다이렉트 된다면) 아래 로직 실행
+    if (!page.url().includes('kicks')) {
+        console.log('⚠️ 직접 진입 실패, 메인에서 메뉴 탐색 시작...');
+        await page.goto('https://www.musinsa.com/', { waitUntil: 'networkidle' });
+        await page.keyboard.press('Escape');
+        
+        // [전략 2] 텍스트가 아닌 속성 기반으로 더 넓게 탐색
+        // 'KICKS' 글자가 포함된 모든 링크 중 하나라도 클릭하게 함
+        const kicksMenu = page.locator('a[href*="kicks"], a:has-text("KICKS")').first();
+        
+        await kicksMenu.scrollIntoViewIfNeeded();
+        await kicksMenu.click({ force: true, timeout: 10000 });
+    }
 
     await page.waitForURL(/.*kicks|sneaker.*/, { timeout: 20000 });
-
-    console.log('✅ KICKS 메뉴 진입 성공');
+    console.log('✅ KICKS 섹션 진입 완료');
 
     // 2. 나이키 브랜드 탭 선택
     const nikeTab = page.locator('a, button').filter({ hasText: /^NIKE$|^나이키$/i }).first();
