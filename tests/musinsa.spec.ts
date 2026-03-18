@@ -3,12 +3,19 @@ import { test, expect } from '@playwright/test';
 test('무신사 메인 > KICKS > 나이키 선택 > 구매 시나리오', async ({ page }) => {
     test.setTimeout(90000); 
 
-    await page.goto('https://www.musinsa.com/', { waitUntil: 'load' });
+    await page.goto('https://www.musinsa.com/', { waitUntil: 'networkidle' });
 
     console.log('🚀 KICKS 메뉴 진입 중...');
     const kicksMenu = page.locator('a').filter({ hasText: 'KICKS' }).first();
-    await kicksMenu.click();
-    await page.waitForURL(/.*kicks|sneaker.*/);
+    
+    // [수정] 클릭 전 요소가 보일 때까지 대기하고, 화면 안으로 스크롤합니다.
+    await kicksMenu.waitFor({ state: 'visible', timeout: 15000 });
+    await kicksMenu.scrollIntoViewIfNeeded();
+    
+    // [수정] 일반 클릭이 안 먹힐 경우를 대비해 force 옵션을 줍니다.
+    await kicksMenu.click({ force: true });
+    
+    await page.waitForURL(/.*kicks|sneaker.*/, { timeout: 20000 });
 
     // 2. 나이키 브랜드 탭 선택
     const nikeTab = page.locator('a, button').filter({ hasText: /^NIKE$|^나이키$/i }).first();
