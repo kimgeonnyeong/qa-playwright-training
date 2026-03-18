@@ -1,20 +1,32 @@
 import { test, expect } from '@playwright/test';
 
 test('무신사 메인 > KICKS > 나이키 선택 > 구매 시나리오', async ({ page }) => {
-    test.setTimeout(90000); 
-
+    // 1. 서버 환경 대비 해상도 강제 설정
+    await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('https://www.musinsa.com/', { waitUntil: 'networkidle' });
 
     console.log('🚀 KICKS 메뉴 진입 중...');
-    const kicksMenu = page.locator('a').filter({ hasText: 'KICKS' }).first();
     
-    // [수정] 클릭 전 요소가 보일 때까지 대기하고, 화면 안으로 스크롤합니다.
-    await kicksMenu.waitFor({ state: 'visible', timeout: 15000 });
-    await kicksMenu.scrollIntoViewIfNeeded();
+    // 2. 혹시 모를 메인 팝업/레이어 제거 (Escape 키 연타)
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+
+    // 3. 셀렉터 보강: 'KICKS' 텍스트를 가진 링크를 더 정확하게 타겟팅
+    // 'KICKS'라는 정확한 텍스트를 가진 요소를 찾거나, 해당 메뉴의 정확한 클래스를 활용합니다.
+    const kicksMenu = page.locator('nav, header').getByRole('link', { name: 'KICKS', exact: true }).first();
     
-    // [수정] 일반 클릭이 안 먹힐 경우를 대비해 force 옵션을 줍니다.
-    await kicksMenu.click({ force: true });
-    
+    // 요소가 나타날 때까지 기다리되, 안 보이면 스크롤 시도
+    try {
+        await kicksMenu.waitFor({ state: 'attached', timeout: 10000 });
+        await kicksMenu.scrollIntoViewIfNeeded();
+        await kicksMenu.click({ force: true });
+    } catch (e) {
+        console.log('⚠️ 일반 메뉴에서 찾지 못함. "더보기" 혹은 모바일 메뉴 확인 시도');
+        // '더보기' 메뉴 안에 있을 경우를 대비한 대체 클릭 (필요 시)
+        await page.getByRole('button', { name: '메뉴' }).click().catch(() => {});
+        await kicksMenu.click({ force: true });
+    }
+
     await page.waitForURL(/.*kicks|sneaker.*/, { timeout: 20000 });
 
     // 2. 나이키 브랜드 탭 선택
